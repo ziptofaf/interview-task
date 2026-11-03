@@ -1,0 +1,11 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+root = File.expand_path('..', __dir__)
+begin
+  require 'minitest/autorun'
+rescue LoadError
+  warn 'Minitest is missing. Install it with: gem install minitest -v 5.20.0'
+  exit 2
+end
+Dir[File.join(root, 'test', '*_test.rb')].sort.each { |path| require path }
