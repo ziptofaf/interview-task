@@ -4,7 +4,7 @@ require_relative 'http_error'
 
 module HiringExercise
   class QuoteWorker
-    MAX_RETRIES = 2
+    RETRY_DELAYS = [1.0, 2.0].freeze
 
     def initialize(client:, store:, events:, sleeper:)
       @client = client
@@ -18,15 +18,15 @@ module HiringExercise
       begin
         attempts += 1
         result = @client.search(request_id)
-        @store.save(request_id, result)
-        @events.record(:quote_ready, request_id)
-        result
-      rescue StandardError
-        raise if attempts >= MAX_RETRIES
+      rescue HttpError => e
+        raise unless e.status == 503 && attempts <= RETRY_DELAYS.length
 
-        @sleeper.call(1.0)
+        @sleeper.call(RETRY_DELAYS[attempts - 1])
         retry
       end
+      @store.save(request_id, result)
+      @events.record(:quote_ready, request_id)
+      result
     end
   end
 end
